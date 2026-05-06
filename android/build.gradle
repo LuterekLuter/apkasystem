@@ -6,6 +6,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
+        // Plugin Androida – taki jak wcześniej (8.3.0)
         classpath "com.android.tools.build:gradle:8.3.0"
     }
 }
@@ -17,6 +18,8 @@ allprojects {
     }
 }
 
-tasks.register("clean", Delete) {
-    delete(rootProject.buildDir)
+// Użyj klasycznego taska 'clean' zamiast tasks.register(...),
+// bo starsze Gradle nie mają jeszcze API register()
+task clean(type: Delete) {
+    delete rootProject.buildDir
 }
