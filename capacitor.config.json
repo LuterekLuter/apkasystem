@@ -1,0 +1,9 @@
+{
+  "appId": "pl.luter.android16clean",
+  "appName": "Android 16 Clean Edition",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "file"
+  }
+}
