@@ -33,6 +33,11 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // Ukryj ActionBar jeśli istnieje (dla motywów AppCompat)
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().hide();
+        }
+
         webView = new WebView(this);
         setContentView(webView);
 
@@ -88,19 +93,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadLauncher() {
-        // ładujemy index.html z assets/web
         String url = "file:///android_asset/web/index.html";
         webView.loadUrl(url);
     }
 
     @Override
     public void onBackPressed() {
-        // jeśli jest historia w WebView – wracamy; w przeciwnym razie zachowanie domyślne
+        // Całkowicie blokujemy przycisk wstecz — apka działa jak launcher
         if (webView != null && webView.canGoBack()) {
             webView.goBack();
-            return;
         }
-        super.onBackPressed();
+        // Nie wywołujemy super.onBackPressed() — zapobiega wyjściu z apki
     }
 
     public class AndroidBridge {
