@@ -1,29 +1,55 @@
-// app.js
+// app.js — Android 16 Clean Edition
+// Poprawka: bezpieczny storage (MIUI/Redmi localStorage fix)
+
 // ─────────────────────────────────────────────────────────────────────────────
-// OTA Auto-Update
-// Sprawdza GitHub Releases przy każdym starcie. Jeśli znajdzie nowszą wersję
-// app.js i styles.css, pobiera je, zapisuje w localStorage i przeładowuje.
+// Safe Storage — działa na MIUI gdzie localStorage rzuca wyjątek dla file://
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SafeStorage = (() => {
+  let mem = {};
+  let useLS = false;
+  try {
+    localStorage.setItem("__test__", "1");
+    localStorage.removeItem("__test__");
+    useLS = true;
+  } catch (_) {}
+
+  return {
+    get(k) {
+      try { return useLS ? localStorage.getItem(k) : (mem[k] ?? null); } catch(_) { return mem[k] ?? null; }
+    },
+    set(k, v) {
+      try { if (useLS) localStorage.setItem(k, v); } catch(_) {}
+      mem[k] = v;
+    },
+    remove(k) {
+      try { if (useLS) localStorage.removeItem(k); } catch(_) {}
+      delete mem[k];
+    }
+  };
+})();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OTA Auto-Update (opcjonalne — nie crashuje gdy brak sieci)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const OTA = (() => {
-  // !! Zmień na swoje repozytorium !!
   const GITHUB_REPO  = "luterekluter/apkasystem";
-  const CURRENT_VER  = "1.0.0"; // musi być zgodna z tagiem release na GitHubie
+  const CURRENT_VER  = "1.0.0";
   const OTA_KEY      = "ota_version";
   const OTA_JS_KEY   = "ota_app_js";
   const OTA_CSS_KEY  = "ota_styles_css";
 
   function semverGt(a, b) {
-    // zwraca true jeśli a > b (np. "1.1.0" > "1.0.0")
     try {
       const pa = a.replace(/^v/, "").split(".").map(Number);
       const pb = b.replace(/^v/, "").split(".").map(Number);
       for (let i = 0; i < 3; i++) {
-        if ((pa[i] || 0) > (pb[i] || 0)) return true;
-        if ((pa[i] || 0) < (pb[i] || 0)) return false;
+        if ((pa[i]||0) > (pb[i]||0)) return true;
+        if ((pa[i]||0) < (pb[i]||0)) return false;
       }
       return false;
-    } catch (_) { return false; }
+    } catch(_) { return false; }
   }
 
   async function fetchText(url) {
@@ -34,61 +60,36 @@ const OTA = (() => {
 
   async function check() {
     try {
-      const apiUrl = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
-      const r = await fetch(apiUrl, { cache: "no-store" });
+      const r = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, { cache: "no-store" });
       if (!r.ok) return;
       const data = await r.json();
       const tag = (data.tag_name || "").replace(/^v/, "");
-
-      if (!semverGt(tag, CURRENT_VER)) return; // nie ma nowej wersji
-
-      // Pobierz pliki z raw GitHuba (branch main)
+      if (!semverGt(tag, CURRENT_VER)) return;
       const base = `https://raw.githubusercontent.com/${GITHUB_REPO}/main/web`;
-      const [js, css] = await Promise.all([
-        fetchText(`${base}/app.js`),
-        fetchText(`${base}/styles.css`),
-      ]);
-
-      localStorage.setItem(OTA_JS_KEY,  js);
-      localStorage.setItem(OTA_CSS_KEY, css);
-      localStorage.setItem(OTA_KEY,     tag);
-
-      // Przeładuj — nowe pliki zostaną wstrzyknięte przy starcie
+      const [js, css] = await Promise.all([fetchText(`${base}/app.js`), fetchText(`${base}/styles.css`)]);
+      SafeStorage.set(OTA_JS_KEY, js);
+      SafeStorage.set(OTA_CSS_KEY, css);
+      SafeStorage.set(OTA_KEY, tag);
       location.reload();
-    } catch (_) {
-      // Brak sieci lub błąd — działamy dalej lokalnie
-    }
+    } catch(_) {}
   }
 
   function applyStored() {
-    // Jeśli w localStorage są nowsze pliki, nadpisz je w DOM
     try {
-      const storedJS  = localStorage.getItem(OTA_JS_KEY);
-      const storedCSS = localStorage.getItem(OTA_CSS_KEY);
-
+      const storedCSS = SafeStorage.get(OTA_CSS_KEY);
+      const storedJS  = SafeStorage.get(OTA_JS_KEY);
       if (storedCSS) {
         let el = document.getElementById("ota-styles");
-        if (!el) {
-          el = document.createElement("style");
-          el.id = "ota-styles";
-          document.head.appendChild(el);
-        }
+        if (!el) { el = document.createElement("style"); el.id = "ota-styles"; document.head.appendChild(el); }
         el.textContent = storedCSS;
       }
-
       if (storedJS) {
-        // Nie można ponownie uruchomić bieżącego skryptu, ale
-        // następny reload wczyta już app.js z localStorage (patrz niżej).
-        // applyStored uruchamia się PRZED initApp więc nadpisanie stanu jest OK.
-        // Logika: jeśli stored JS istnieje — eval go w izolowanej funkcji.
-        // eslint-disable-next-line no-new-func
         const run = new Function(storedJS);
         run();
-        return true; // sygnał: kod został zastąpiony
+        return true;
       }
-    } catch (_) {
-      // Zepsuty OTA — wyczyść i działaj lokalnie
-      try { localStorage.removeItem(OTA_JS_KEY); } catch (_2) {}
+    } catch(_) {
+      try { SafeStorage.remove(OTA_JS_KEY); } catch(_2) {}
     }
     return false;
   }
@@ -103,7 +104,7 @@ const OTA = (() => {
 const ONBOARDING_KEY = "android16_onboarding_completed";
 
 const state = {
-  mode: "boot",        // 'boot' | 'oobe' | 'home'
+  mode: "boot",
   stepIndex: 0,
   lastClockTap: 0,
   bootNextMode: "oobe",
@@ -185,7 +186,6 @@ const OOBE_STEPS = [
           <div class="oobe-segment"><span>Dom 2.4G</span><span>Średni sygnał</span></div>
           <div class="oobe-segment"><span>Hotspot</span><span>Słaby sygnał</span></div>
         </div>
-        <div class="oobe-field-label" style="margin-top:12px;">Możesz też skonfigurować sieć później.</div>
       </div>
     `,
   },
@@ -295,30 +295,18 @@ const OOBE_STEPS = [
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-function isLastStep() {
-  return state.stepIndex === OOBE_STEPS.length - 1;
-}
-
-function setMode(mode) {
-  state.mode = mode;
-  render();
-}
-
+function isLastStep() { return state.stepIndex === OOBE_STEPS.length - 1; }
+function setMode(mode) { state.mode = mode; render(); }
 function goToStep(index, direction) {
   state.stepIndex = Math.max(0, Math.min(OOBE_STEPS.length - 1, index));
   renderOobe(direction || "forward");
 }
-
 function completeOnboarding() {
-  try { localStorage.setItem(ONBOARDING_KEY, "1"); } catch (_) {}
+  SafeStorage.set(ONBOARDING_KEY, "1");
   setMode("home");
 }
-
 function stopClock() {
-  if (state.clockInterval) {
-    clearInterval(state.clockInterval);
-    state.clockInterval = null;
-  }
+  if (state.clockInterval) { clearInterval(state.clockInterval); state.clockInterval = null; }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -344,13 +332,9 @@ function render() {
 
   attachStatusBarClock();
 
-  if (state.mode === "boot") {
-    renderBootScreen();
-  } else if (state.mode === "oobe") {
-    renderOobe("forward");
-  } else {
-    renderHome();
-  }
+  if (state.mode === "boot") renderBootScreen();
+  else if (state.mode === "oobe") renderOobe("forward");
+  else renderHome();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -400,9 +384,7 @@ function attachStatusBarClock() {
   const DOUBLE_TAP_MS = 400;
   hitEl.addEventListener("click", () => {
     const now = Date.now();
-    if (now - state.lastClockTap < DOUBLE_TAP_MS) {
-      callBridge("openSettings");
-    }
+    if (now - state.lastClockTap < DOUBLE_TAP_MS) callBridge("openSettings");
     state.lastClockTap = now;
   });
 }
@@ -494,7 +476,7 @@ function renderHome() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// AndroidBridge — bezpieczne wywołania, bez fallbacków które crashują WebView
+// AndroidBridge
 // ─────────────────────────────────────────────────────────────────────────────
 
 function callBridge(method) {
@@ -502,9 +484,7 @@ function callBridge(method) {
     if (window.AndroidBridge && typeof window.AndroidBridge[method] === "function") {
       window.AndroidBridge[method]();
     }
-  } catch (e) {
-    // cicho — nie crashujemy apki
-  }
+  } catch(e) {}
 }
 
 function handleAppLaunch(app) {
@@ -523,17 +503,15 @@ function handleAppLaunch(app) {
 
 function initApp() {
   let completed = false;
-  try { completed = localStorage.getItem(ONBOARDING_KEY) === "1"; } catch (_) {}
+  try { completed = SafeStorage.get(ONBOARDING_KEY) === "1"; } catch(_) {}
 
-  state.bootNextMode    = completed ? "home" : "oobe";
-  state.mode            = "boot";
-  state.stepIndex       = 0;
-  state.bootTimeoutSet  = false;
-  state.lastClockTap    = 0;
+  state.bootNextMode   = completed ? "home" : "oobe";
+  state.mode           = "boot";
+  state.stepIndex      = 0;
+  state.bootTimeoutSet = false;
+  state.lastClockTap   = 0;
 
   render();
-
-  // Sprawdź aktualizacje w tle — nie blokuje UI
   OTA.check();
 }
 
