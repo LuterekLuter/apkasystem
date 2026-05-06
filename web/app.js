@@ -3,9 +3,11 @@
 const ONBOARDING_KEY = "android16_onboarding_completed";
 
 const state = {
-  mode: "oobe", // 'oobe' | 'home'
+  mode: "boot", // 'boot' | 'oobe' | 'home'
   stepIndex: 0,
-  lastClockTap: 0
+  lastClockTap: 0,
+  bootNextMode: "oobe",
+  bootTimeoutSet: false
 };
 
 const OOBE_STEPS = [
@@ -272,10 +274,45 @@ function render() {
   `;
 
   attachStatusBarClock();
-  if (state.mode === "oobe") {
+
+  if (state.mode === "boot") {
+    renderBootScreen();
+  } else if (state.mode === "oobe") {
     renderOobe("forward");
   } else {
     renderHome();
+  }
+}
+
+/* Boot / PureVision UI */
+
+function renderBootScreen() {
+  const container = document.getElementById("mainScreen");
+
+  container.innerHTML = `
+    <div class="boot-screen">
+      <div>
+        <div class="boot-logo">
+          <span>Pure</span>Vision UI
+        </div>
+        <div class="boot-device">
+          Pure16 Developer Edition (A16‑DV)
+        </div>
+      </div>
+      <div class="boot-tagline">
+        Minimalistyczny interfejs systemowy zaprojektowany dla twórców i perfekcjonistów.
+      </div>
+      <div class="boot-progress">
+        <div class="boot-progress-fill"></div>
+      </div>
+    </div>
+  `;
+
+  if (!state.bootTimeoutSet) {
+    state.bootTimeoutSet = true;
+    setTimeout(() => {
+      setMode(state.bootNextMode);
+    }, 1800);
   }
 }
 
@@ -490,8 +527,12 @@ function initApp() {
   } catch (_) {
     completed = false;
   }
-  state.mode = completed ? "home" : "oobe";
+
+  state.bootNextMode = completed ? "home" : "oobe";
+  state.mode = "boot";
   state.stepIndex = 0;
+  state.bootTimeoutSet = false;
+
   render();
 }
 
