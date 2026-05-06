@@ -61,3 +61,18 @@ dependencies {
     implementation "androidx.core:core-ktx:1.13.1"
     implementation "androidx.webkit:webkit:1.8.0"
 }
+
+/**
+ * FIX na błąd:
+ * Duplicate class kotlin.collections.jdk8.CollectionsJDK8Kt ...
+ *
+ * Kotlin 1.8.x ma już wbudowane warianty JDK7/JDK8 w kotlin-stdlib,
+ * więc stare moduły kotlin-stdlib-jdk7 / kotlin-stdlib-jdk8 powodują
+ * duplikaty klas.[web:88][web:98]
+ *
+ * Najprostsze rozwiązanie: globalnie wyłączamy te dwa moduły.
+ */
+configurations.all {
+    exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk7"
+    exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk8"
+}
