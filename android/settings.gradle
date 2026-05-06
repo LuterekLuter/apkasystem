@@ -1,0 +1,4 @@
+// android/settings.gradle
+
+rootProject.name = "Android16CleanEdition"
+include(":app")
