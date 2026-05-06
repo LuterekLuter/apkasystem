@@ -161,7 +161,7 @@ public class MainActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public void openSettings() {
-            safeStartActivity(new Intent(Settings.ACTION_SETTINGS));
+            finishAffinity();
         }
 
         @JavascriptInterface
