@@ -9,7 +9,11 @@ import android.os.Bundle;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -23,17 +27,22 @@ public class MainActivity extends AppCompatActivity {
 
     private WebView webView;
 
-    private static final String[] CALCULATOR_PACKAGES = new String[]{
+    private static final String[] CALCULATOR_PACKAGES = {
             "com.google.android.calculator",
             "com.android.calculator2",
-            "com.sec.android.app.popupcalculator"
+            "com.sec.android.app.popupcalculator",
     };
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
+        // Ukryj ActionBar i pasek tytułu PRZED super i setContentView
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        getWindow().setFlags(
+            WindowManager.LayoutParams.FLAG_FULLSCREEN,
+            WindowManager.LayoutParams.FLAG_FULLSCREEN
+        );
         super.onCreate(savedInstanceState);
 
-        // Ukryj ActionBar jeśli istnieje (dla motywów AppCompat)
         if (getSupportActionBar() != null) {
             getSupportActionBar().hide();
         }
@@ -50,26 +59,43 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         hideSystemUI();
+        if (webView != null) webView.onResume();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (webView != null) webView.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (webView != null) {
+            webView.destroy();
+            webView = null;
+        }
+        super.onDestroy();
     }
 
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
-        if (hasFocus) {
-            hideSystemUI();
-        }
+        if (hasFocus) hideSystemUI();
     }
 
     private void hideSystemUI() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            getWindow().setDecorFitsSystemWindows(false);
+        }
         View decorView = getWindow().getDecorView();
-        int flags =
-                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_FULLSCREEN
-                        | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
-        decorView.setSystemUiVisibility(flags);
+        decorView.setSystemUiVisibility(
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+            | View.SYSTEM_UI_FLAG_FULLSCREEN
+            | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+        );
     }
 
     private void setupWebView() {
@@ -81,96 +107,104 @@ public class MainActivity extends AppCompatActivity {
         settings.setLoadWithOverviewMode(true);
         settings.setUseWideViewPort(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            settings.setSafeBrowsingEnabled(true);
+            settings.setSafeBrowsingEnabled(false); // wyłącz — blokuje file:// na niektórych ROM-ach
         }
 
         webView.setWebChromeClient(new WebChromeClient());
-        webView.setWebViewClient(new WebViewClient());
+
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                // Blokuj nawigację poza file:// — zapobiega crashowi WebView
+                String url = request.getUrl().toString();
+                if (url.startsWith("file://")) {
+                    return false; // pozwól WebView obsłużyć
+                }
+                // Wszystko inne (http, https, tel, intent...) — ignoruj
+                return true;
+            }
+
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request,
+                                        WebResourceError error) {
+                // Nie rób nic — nie crashuj apki z powodu błędu zasobu
+            }
+        });
 
         webView.addJavascriptInterface(new AndroidBridge(), "AndroidBridge");
     }
 
     private void loadLauncher() {
-        String url = "file:///android_asset/web/index.html";
-        webView.loadUrl(url);
+        webView.loadUrl("file:///android_asset/web/index.html");
     }
 
     @Override
     public void onBackPressed() {
-        // Całkowicie blokujemy przycisk wstecz — apka działa jak launcher
+        // Launcher — przycisk wstecz nigdy nie zamyka apki
         if (webView != null && webView.canGoBack()) {
             webView.goBack();
         }
-        // Nie wywołujemy super.onBackPressed() — zapobiega wyjściu z apki
+        // Celowo NIE wywołujemy super.onBackPressed()
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // AndroidBridge
+    // ─────────────────────────────────────────────────────────────────────────
 
     public class AndroidBridge {
 
         @JavascriptInterface
         public void openSettings() {
-            try {
-                Intent intent = new Intent(Settings.ACTION_SETTINGS);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(intent);
-            } catch (Exception e) {
-                showToast("Nie można otworzyć ustawień.");
-            }
+            safeStartActivity(new Intent(Settings.ACTION_SETTINGS));
         }
 
         @JavascriptInterface
         public void openPhone() {
-            try {
-                Intent intent = new Intent(Intent.ACTION_DIAL);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(intent);
-            } catch (ActivityNotFoundException e) {
-                showToast("Nie znaleziono aplikacji telefonu.");
-            }
+            safeStartActivity(new Intent(Intent.ACTION_DIAL));
         }
 
         @JavascriptInterface
         public void openCamera() {
-            try {
-                Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(intent);
-            } catch (ActivityNotFoundException e) {
-                showToast("Nie znaleziono aplikacji aparatu.");
-            }
+            safeStartActivity(new Intent(MediaStore.ACTION_IMAGE_CAPTURE));
         }
 
         @JavascriptInterface
         public void openBrowser() {
-            try {
-                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com"));
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(intent);
-            } catch (ActivityNotFoundException e) {
-                showToast("Nie znaleziono przeglądarki.");
-            }
+            safeStartActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com")));
         }
 
         @JavascriptInterface
         public void openCalculator() {
             for (String pkg : CALCULATOR_PACKAGES) {
                 try {
-                    Intent launchIntent = getPackageManager().getLaunchIntentForPackage(pkg);
-                    if (launchIntent != null) {
-                        launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        startActivity(launchIntent);
+                    Intent i = getPackageManager().getLaunchIntentForPackage(pkg);
+                    if (i != null) {
+                        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(i);
                         return;
                     }
-                } catch (Exception ignored) {
-                }
+                } catch (Exception ignored) {}
             }
             showToast("Nie znaleziono aplikacji kalkulatora.");
         }
 
-        private void showToast(final String message) {
+        private void safeStartActivity(Intent intent) {
+            try {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+            } catch (ActivityNotFoundException e) {
+                showToast("Nie znaleziono aplikacji.");
+            } catch (Exception e) {
+                showToast("Nie można uruchomić aplikacji.");
+            }
+        }
+
+        private void showToast(final String msg) {
             runOnUiThread(() ->
-                    Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show()
+                Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show()
             );
         }
     }
