@@ -101,6 +101,76 @@ body {
   gap: 16px;
 }
 
+/* Boot / startup screen: PureVision UI */
+
+.boot-screen {
+  flex: 1;
+  border-radius: var(--radius-lg);
+  border: var(--border-subtle);
+  background: radial-gradient(circle at top, #111111 0%, #000000 45%, #000000 100%);
+  box-shadow: var(--shadow-soft);
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  text-align: center;
+}
+
+.boot-logo {
+  font-size: 26px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--fg);
+  font-weight: 300;
+}
+
+.boot-logo span {
+  opacity: 0.48;
+}
+
+.boot-device {
+  font-size: 15px;
+  color: var(--fg-muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.boot-tagline {
+  font-size: 13px;
+  color: var(--fg-muted);
+  max-width: 280px;
+}
+
+.boot-progress {
+  width: 120px;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  position: relative;
+}
+
+.boot-progress-fill {
+  position: absolute;
+  left: -40%;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.2), #ffffff);
+  animation: boot-progress-move 1200ms ease-out infinite;
+}
+
+@keyframes boot-progress-move {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(260%);
+  }
+}
+
 /* OOBE container */
 
 .oobe-container {
@@ -470,75 +540,5 @@ body {
 
   .launcher-grid {
     grid-auto-rows: 96px;
-  }
-}
-
-/* Boot / startup screen: PureVision UI */
-
-.boot-screen {
-  flex: 1;
-  border-radius: var(--radius-lg);
-  border: var(--border-subtle);
-  background: radial-gradient(circle at top, #111111 0%, #000000 45%, #000000 100%);
-  box-shadow: var(--shadow-soft);
-  padding: 24px 20px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 24px;
-  text-align: center;
-}
-
-.boot-logo {
-  font-size: 26px;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: var(--fg);
-  font-weight: 300;
-}
-
-.boot-logo span {
-  opacity: 0.48;
-}
-
-.boot-device {
-  font-size: 15px;
-  color: var(--fg-muted);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.boot-tagline {
-  font-size: 13px;
-  color: var(--fg-muted);
-  max-width: 280px;
-}
-
-.boot-progress {
-  width: 120px;
-  height: 2px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  overflow: hidden;
-  position: relative;
-}
-
-.boot-progress-fill {
-  position: absolute;
-  left: -40%;
-  top: 0;
-  bottom: 0;
-  width: 40%;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.2), #ffffff);
-  animation: boot-progress-move 1200ms ease-out infinite;
-}
-
-@keyframes boot-progress-move {
-  0% {
-    transform: translateX(0%);
-  }
-  100% {
-    transform: translateX(260%);
   }
 }
