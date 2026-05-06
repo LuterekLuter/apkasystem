@@ -1,0 +1,12 @@
+{
+  "name": "android16-clean-edition",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Minimalistyczny launcher Android 16 Clean Edition (HTML/CSS/JS + WebView, OOBE, intents).",
+  "scripts": {
+    "build": "rm -rf dist && mkdir -p dist/vendor && cp web/index.html dist/index.html && cp web/styles.css dist/styles.css && cp web/app.js dist/app.js && cp node_modules/@capacitor/core/dist/capacitor.js dist/vendor/capacitor.js"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.0.0"
+  }
+}
