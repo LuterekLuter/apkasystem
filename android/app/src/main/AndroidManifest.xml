@@ -14,32 +14,34 @@
    <application
         android:allowBackup="true"
         android:icon="@android:drawable/sym_def_app_icon"
-        android:label="Android 16 Clean Edition"
+        android:label=" "
         android:supportsRtl="true"
+        android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
         android:usesCleartextTraffic="false">
 
-<activity
-    android:name=".MainActivity"
-    android:exported="true"
-    android:launchMode="singleTask"
-    android:configChanges="keyboardHidden|orientation|screenSize|uiMode"
-    android:screenOrientation="portrait">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:configChanges="keyboardHidden|orientation|screenSize|uiMode"
+            android:screenOrientation="portrait"
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
 
-    <intent-filter>
-        <!-- Główne wejście do apki -->
-        <action android:name="android.intent.action.MAIN" />
+            <intent-filter>
+                <!-- Główne wejście do apki -->
+                <action android:name="android.intent.action.MAIN" />
 
-        <!-- 1) Ikona w szufladzie aplikacji -->
-        <category android:name="android.intent.category.LAUNCHER" />
+                <!-- 1) Ikona w szufladzie aplikacji -->
+                <category android:name="android.intent.category.LAUNCHER" />
 
-        <!-- 2) Kandydat na ekran główny (launcher) przy HOME -->
-        <category android:name="android.intent.category.HOME" />
+                <!-- 2) Kandydat na ekran główny (launcher) przy HOME -->
+                <category android:name="android.intent.category.HOME" />
 
-        <!-- 3) Wymagane dla implicit intents / HOME -->
-        <category android:name="android.intent.category.DEFAULT" />
-    </intent-filter>
+                <!-- 3) Wymagane dla implicit intents / HOME -->
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
 
-</activity>
+        </activity>
 
     </application>
 
