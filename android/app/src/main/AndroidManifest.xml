@@ -1,4 +1,3 @@
-<!-- android/app/src/main/AndroidManifest.xml -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="pl.luter.android16clean">
 
@@ -14,9 +13,8 @@
         android:allowBackup="true"
         android:icon="@android:drawable/sym_def_app_icon"
         android:label=" "
-        android:supportsRtl="true"
-        android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
         android:hardwareAccelerated="true"
+        android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
         android:usesCleartextTraffic="false">
 
         <activity
@@ -26,7 +24,7 @@
             android:hardwareAccelerated="true"
             android:configChanges="keyboardHidden|orientation|screenSize|uiMode|screenLayout|smallestScreenSize"
             android:screenOrientation="portrait"
-            android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
             android:windowSoftInputMode="adjustResize">
 
             <intent-filter>
