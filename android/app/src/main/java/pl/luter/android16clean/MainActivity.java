@@ -1,29 +1,25 @@
-// android/app/src/main/java/pl/luter/android16clean/MainActivity.java
 package pl.luter.android16clean;
 
+import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
-import android.provider.Settings;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.webkit.JavascriptInterface;
 import android.widget.Toast;
 
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
 
     private WebView webView;
 
@@ -34,18 +30,13 @@ public class MainActivity extends AppCompatActivity {
     };
 
     @Override
-    protected void onCreate(@Nullable Bundle savedInstanceState) {
-        // Ukryj ActionBar i pasek tytułu PRZED super i setContentView
+    protected void onCreate(Bundle savedInstanceState) {
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(
             WindowManager.LayoutParams.FLAG_FULLSCREEN,
             WindowManager.LayoutParams.FLAG_FULLSCREEN
         );
         super.onCreate(savedInstanceState);
-
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().hide();
-        }
 
         webView = new WebView(this);
         setContentView(webView);
@@ -84,9 +75,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void hideSystemUI() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            getWindow().setDecorFitsSystemWindows(false);
-        }
         View decorView = getWindow().getDecorView();
         decorView.setSystemUiVisibility(
             View.SYSTEM_UI_FLAG_LAYOUT_STABLE
@@ -102,38 +90,24 @@ public class MainActivity extends AppCompatActivity {
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
-        settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(true);
-        settings.setAllowContentAccess(true);
         settings.setAllowFileAccessFromFileURLs(true);
         settings.setAllowUniversalAccessFromFileURLs(true);
         settings.setLoadWithOverviewMode(true);
         settings.setUseWideViewPort(true);
-        settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            settings.setSafeBrowsingEnabled(false); // wyłącz — blokuje file:// na niektórych ROM-ach
-        }
-
         webView.setWebChromeClient(new WebChromeClient());
-
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                // Blokuj nawigację poza file:// — zapobiega crashowi WebView
                 String url = request.getUrl().toString();
-                if (url.startsWith("file://")) {
-                    return false; // pozwól WebView obsłużyć
-                }
-                // Wszystko inne (http, https, tel, intent...) — ignoruj
-                return true;
+                return !url.startsWith("file://");
             }
 
             @Override
-            public void onReceivedError(WebView view, WebResourceRequest request,
-                                        WebResourceError error) {
-                // Nie rób nic — nie crashuj apki z powodu błędu zasobu
+            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                // nie crashuj z powodu błędu zasobu
             }
         });
 
@@ -146,16 +120,10 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        // Launcher — przycisk wstecz nigdy nie zamyka apki
         if (webView != null && webView.canGoBack()) {
             webView.goBack();
         }
-        // Celowo NIE wywołujemy super.onBackPressed()
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // AndroidBridge
-    // ─────────────────────────────────────────────────────────────────────────
 
     public class AndroidBridge {
 
@@ -166,17 +134,17 @@ public class MainActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public void openPhone() {
-            safeStartActivity(new Intent(Intent.ACTION_DIAL));
+            safeStart(new Intent(Intent.ACTION_DIAL));
         }
 
         @JavascriptInterface
         public void openCamera() {
-            safeStartActivity(new Intent(MediaStore.ACTION_IMAGE_CAPTURE));
+            safeStart(new Intent(MediaStore.ACTION_IMAGE_CAPTURE));
         }
 
         @JavascriptInterface
         public void openBrowser() {
-            safeStartActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com")));
+            safeStart(new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com")));
         }
 
         @JavascriptInterface
@@ -191,21 +159,21 @@ public class MainActivity extends AppCompatActivity {
                     }
                 } catch (Exception ignored) {}
             }
-            showToast("Nie znaleziono aplikacji kalkulatora.");
+            toast("Nie znaleziono kalkulatora.");
         }
 
-        private void safeStartActivity(Intent intent) {
+        private void safeStart(Intent intent) {
             try {
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(intent);
             } catch (ActivityNotFoundException e) {
-                showToast("Nie znaleziono aplikacji.");
+                toast("Nie znaleziono aplikacji.");
             } catch (Exception e) {
-                showToast("Nie można uruchomić aplikacji.");
+                toast("Błąd uruchamiania.");
             }
         }
 
-        private void showToast(final String msg) {
+        private void toast(final String msg) {
             runOnUiThread(() ->
                 Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show()
             );
