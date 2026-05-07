@@ -1,5 +1,3 @@
-// android/app/build.gradle
-
 plugins {
     id "com.android.application"
 }
@@ -10,14 +8,10 @@ android {
 
     defaultConfig {
         applicationId "pl.luter.android16clean"
-        minSdk 24
+        minSdk 21
         targetSdk 34
         versionCode 1
         versionName "1.0"
-
-        vectorDrawables {
-            useSupportLibrary true
-        }
     }
 
     buildTypes {
@@ -38,17 +32,8 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
-
-    packagingOptions {
-        resources {
-            excludes += ["META-INF/LICENSE*", "META-INF/NOTICE*"]
-        }
-    }
 }
 
-/**
- * Kopiuje web/ bezpośrednio do assets — nie potrzebujemy npm/dist.
- */
 tasks.register("copyWebAssets", Copy) {
     from("$rootDir/../web")
     into("$projectDir/src/main/assets/web")
@@ -58,11 +43,5 @@ tasks.register("copyWebAssets", Copy) {
 preBuild.dependsOn("copyWebAssets")
 
 dependencies {
-    implementation "androidx.appcompat:appcompat:1.6.1"
-    implementation "androidx.webkit:webkit:1.8.0"
-}
-
-configurations.all {
-    exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk7"
-    exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk8"
+    // Usunięto appcompat i webkit — używamy czystego android.app.Activity
 }
